@@ -1,37 +1,182 @@
 require("dotenv").config();
+
 const express = require("express");
-const { MongoClient, ServerApiVersion } = require('mongodb');
-const uri = process.env.MONGODB_URI;
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
-const app=express();
+
+const app = express();
 const port = process.env.PORT;
+
+const uri = process.env.MONGODB_URI;
+
 app.use(cors());
 app.use(express.json());
+
 const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  }
+    serverApi: {
+        version: ServerApiVersion.v1,
+        strict: true,
+        deprecationErrors: true,
+    },
 });
+
+const db = client.db("test");
+const propertiesCollection = db.collection("properties");
+
 async function run() {
-  try {
-    // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
-    // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-  } finally {
-    // Ensures that the client will close when you finish/error
-    // await client.close();
-  }
+    try {
+        await client.connect();
+
+        await client.db("admin").command({ ping: 1 });
+
+        console.log(
+            "Pinged your deployment. You successfully connected to MongoDB!"
+        );
+    } catch (error) {
+        console.error("MongoDB connection error:", error);
+    }
 }
-run().catch(console.dir);
+
+run();
 
 
 app.get("/", (req, res) => {
-  res.send("Rentina Server is Running...");
+    res.send("Rentina Server is Running...");
 });
+
+// =========================
+// ADD Property
+// =========================
+
+app.post("/api/properties", async (req, res) => {
+    try {
+        console.log("Received property data:");
+        console.log(req.body);
+
+        const {
+            ownerId,
+            title,
+            location,
+            city,
+            rent,
+            bedrooms,
+            bathrooms,
+            area,
+            description,
+            image,
+        } = req.body;
+
+        // Check required text fields
+        if (!ownerId) {
+            return res.status(400).json({
+                success: false,
+                message: "Owner ID is required",
+            });
+        }
+
+        if (!title) {
+            return res.status(400).json({
+                success: false,
+                message: "Title is required",
+            });
+        }
+
+        if (!location) {
+            return res.status(400).json({
+                success: false,
+                message: "Location is required",
+            });
+        }
+
+        if (!city) {
+            return res.status(400).json({
+                success: false,
+                message: "City is required",
+            });
+        }
+
+        if (!description) {
+            return res.status(400).json({
+                success: false,
+                message: "Description is required",
+            });
+        }
+
+        if (!image) {
+            return res.status(400).json({
+                success: false,
+                message: "Image is required",
+            });
+        }
+
+        // Check numeric fields
+        if (Number.isNaN(Number(rent)) || Number(rent) <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid rent",
+            });
+        }
+
+        if (Number.isNaN(Number(bedrooms)) || Number(bedrooms) <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid bedrooms",
+            });
+        }
+
+        if (Number.isNaN(Number(bathrooms)) || Number(bathrooms) <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid bathrooms",
+            });
+        }
+
+        if (Number.isNaN(Number(area)) || Number(area) <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid area",
+            });
+        }
+
+        const propertyData = {
+            ownerId,
+            title,
+            location,
+            city,
+            rent: Number(rent),
+            bedrooms: Number(bedrooms),
+            bathrooms: Number(bathrooms),
+            area: Number(area),
+            description,
+            image,
+            status: "available",
+            createdAt: new Date(),
+        };
+
+        const result = await propertiesCollection.insertOne(
+            propertyData
+        );
+
+        console.log("Property inserted:", result.insertedId);
+
+        res.status(201).json({
+            success: true,
+            message: "Property added successfully",
+            propertyId: result.insertedId.toString(),
+        });
+    } catch (error) {
+        console.error("Add property error:", error);
+
+        res.status(500).json({
+            success: false,
+            message: "Failed to add property",
+        });
+    }
+});
+
+
+
+
 app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+    console.log(`Server running on port ${port}`);
 });
