@@ -213,6 +213,73 @@ app.get("/api/properties/my", async (req, res) => {
     }
 });
 
+// =========================
+// GET Single Property
+// =========================
+
+app.get("/api/properties/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { ownerId } = req.query;
+
+        console.log("Get property request:", {
+            id,
+            ownerId,
+        });
+
+        if (!id) {
+            return res.status(400).json({
+                success: false,
+                message: "Property ID is required",
+            });
+        }
+
+        if (!ownerId) {
+            return res.status(400).json({
+                success: false,
+                message: "Owner ID is required",
+            });
+        }
+
+        const { ObjectId } = require("mongodb");
+
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid property ID",
+            });
+        }
+
+        const property = await propertiesCollection.findOne({
+            _id: new ObjectId(id),
+            ownerId: ownerId,
+        });
+
+        if (!property) {
+            return res.status(404).json({
+                success: false,
+                message: "Property not found",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            property: {
+                ...property,
+                _id: property._id.toString(),
+            },
+        });
+    } catch (error) {
+        console.error("Get property error:", error);
+
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch property",
+        });
+    }
+});
+
+
 
 
 app.listen(port, () => {
