@@ -280,6 +280,178 @@ app.get("/api/properties/:id", async (req, res) => {
 });
 
 
+// =========================
+// UPDATE Property
+// =========================
+
+app.put("/api/properties/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const {
+            ownerId,
+            title,
+            location,
+            city,
+            rent,
+            bedrooms,
+            bathrooms,
+            area,
+            description,
+            image,
+            status,
+        } = req.body;
+
+        console.log("Update property request:", {
+            id,
+            ownerId,
+        });
+
+        // Owner ID validation
+        if (!ownerId) {
+            return res.status(400).json({
+                success: false,
+                message: "Owner ID is required",
+            });
+        }
+
+        // Property ID validation
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid property ID",
+            });
+        }
+
+        // Required fields
+        if (!title) {
+            return res.status(400).json({
+                success: false,
+                message: "Title is required",
+            });
+        }
+
+        if (!location) {
+            return res.status(400).json({
+                success: false,
+                message: "Location is required",
+            });
+        }
+
+        if (!city) {
+            return res.status(400).json({
+                success: false,
+                message: "City is required",
+            });
+        }
+
+        if (!description) {
+            return res.status(400).json({
+                success: false,
+                message: "Description is required",
+            });
+        }
+
+        // Number validation
+        if (Number(rent) <= 0 || Number.isNaN(Number(rent))) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid rent",
+            });
+        }
+
+        if (
+            Number(bedrooms) <= 0 ||
+            Number.isNaN(Number(bedrooms))
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid bedrooms",
+            });
+        }
+
+        if (
+            Number(bathrooms) <= 0 ||
+            Number.isNaN(Number(bathrooms))
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid bathrooms",
+            });
+        }
+
+        if (Number(area) <= 0 || Number.isNaN(Number(area))) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid area",
+            });
+        }
+
+        // Check property ownership
+        const property = await propertiesCollection.findOne({
+            _id: new ObjectId(id),
+        });
+
+        if (!property) {
+            return res.status(404).json({
+                success: false,
+                message: "Property not found",
+            });
+        }
+
+        if (property.ownerId !== ownerId) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not allowed to update this property",
+            });
+        }
+
+        // Updated data
+        const updatedProperty = {
+            title,
+            location,
+            city,
+            rent: Number(rent),
+            bedrooms: Number(bedrooms),
+            bathrooms: Number(bathrooms),
+            area: Number(area),
+            description,
+            image: image || property.image,
+            status: status || property.status,
+            updatedAt: new Date(),
+        };
+
+        const result = await propertiesCollection.updateOne(
+            {
+                _id: new ObjectId(id),
+                ownerId: ownerId,
+            },
+            {
+                $set: updatedProperty,
+            }
+        );
+
+        if (result.matchedCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Property not found",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Property updated successfully",
+        });
+    } catch (error) {
+        console.error("Update property error:", error);
+
+        res.status(500).json({
+            success: false,
+            message: "Failed to update property",
+        });
+    }
+});
+
 
 
 app.listen(port, () => {
