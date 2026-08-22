@@ -452,6 +452,74 @@ app.put("/api/properties/:id", async (req, res) => {
     }
 });
 
+// =========================
+// DELETE Property
+// =========================
+
+app.delete("/api/properties/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { ownerId } = req.body;
+
+        if (!ownerId) {
+            return res.status(400).json({
+                success: false,
+                message: "ownerId is required",
+            });
+        }
+
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid property ID",
+            });
+        }
+
+        const property = await propertiesCollection.findOne({
+            _id: new ObjectId(id),
+        });
+
+        if (!property) {
+            return res.status(404).json({
+                success: false,
+                message: "Property not found",
+            });
+        }
+
+        // Make sure only the owner can delete the property
+        if (property.ownerId !== ownerId) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not allowed to delete this property",
+            });
+        }
+
+        const result = await propertiesCollection.deleteOne({
+            _id: new ObjectId(id),
+            ownerId: ownerId,
+        });
+
+        if (result.deletedCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Property could not be deleted",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Property deleted successfully",
+        });
+    } catch (error) {
+        console.error("Delete property error:", error);
+
+        res.status(500).json({
+            success: false,
+            message: "Failed to delete property",
+        });
+    }
+});
+
 
 
 app.listen(port, () => {
