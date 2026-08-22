@@ -174,6 +174,44 @@ app.post("/api/properties", async (req, res) => {
     }
 });
 
+// =========================
+// GET My Properties
+// =========================
+
+app.get("/api/properties/my", async (req, res) => {
+    try {
+        const { ownerId } = req.query;
+
+        if (!ownerId) {
+            return res.status(400).json({
+                success: false,
+                message: "ownerId is required",
+            });
+        }
+
+        const properties = await propertiesCollection
+            .find({ ownerId: ownerId })
+            .sort({ createdAt: -1 })
+            .toArray();
+
+        const formattedProperties = properties.map((property) => ({
+            ...property,
+            _id: property._id.toString(),
+        }));
+
+        res.status(200).json({
+            success: true,
+            properties: formattedProperties,
+        });
+    } catch (error) {
+        console.error("Get properties error:", error);
+
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch properties",
+        });
+    }
+});
 
 
 
