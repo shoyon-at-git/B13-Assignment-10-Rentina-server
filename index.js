@@ -43,7 +43,7 @@ run();
 
 
 app.get("/", (req, res) => {
-  res.send("Rentina Server is Running...");
+  res.send("Rentina Server is Running....");
 });
 
 // =========================
@@ -221,11 +221,21 @@ app.get("/api/properties", async (req, res) => {
 
     // Location Search
     if (search.trim()) {
-      query.location = {
+  query.$or = [
+    {
+      location: {
         $regex: search.trim(),
         $options: "i",
-      };
-    }
+      },
+    },
+    {
+      city: {
+        $regex: search.trim(),
+        $options: "i",
+      },
+    },
+  ];
+}
 
     // Property Type Filter
     if (propertyType.trim()) {
